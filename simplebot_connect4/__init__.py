@@ -86,7 +86,7 @@ def c4_play(bot: DeltaBot, payload: str, message: Message, replies: Replies) -> 
     with session_scope() as session:
         game = session.query(Game).filter_by(p1=p1, p2=p2).first()
         if game is None:  # first time playing with this contact
-            chat = bot.create_group(f"4️⃣ {sender} 🆚 {payload} [c4]", [p1, p2])
+            chat = bot.create_group(f"4️⃣ {sender} 🆚 {payload}", [p1, p2])
             board = Board()
             game = Game(
                 p1=p1, p2=p2, chat_id=chat.id, board=board.export(), black_player=sender
