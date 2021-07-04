@@ -8,7 +8,9 @@ class TestPlugin:
         assert "❌" in msg.text
 
         # error: can't play against bot
-        msg = mocker.get_one_reply(f"/c4_play {mocker.bot.self_contact.addr}", addr=sender)
+        msg = mocker.get_one_reply(
+            f"/c4_play {mocker.bot.self_contact.addr}", addr=sender
+        )
         assert "❌" in msg.text
 
         # error: can't play against yourself
@@ -46,7 +48,9 @@ class TestPlugin:
         assert "❌" not in msg.text
 
         # error: sender is not a player
-        msg = mocker.get_one_reply("/c4_new", addr="nonPlayer@example.org", group=game_group)
+        msg = mocker.get_one_reply(
+            "/c4_new", addr="nonPlayer@example.org", group=game_group
+        )
         assert "❌" in msg.text
 
         # start a new game
@@ -101,7 +105,9 @@ class TestPlugin:
         game_group = msg.chat
 
         # error: sender is not a player
-        msg = mocker.get_one_reply("/c4_surrender", addr="nonPlayer@example.org", group=game_group)
+        msg = mocker.get_one_reply(
+            "/c4_surrender", addr="nonPlayer@example.org", group=game_group
+        )
         assert "❌" in msg.text
 
         # end current game

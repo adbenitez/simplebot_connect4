@@ -49,7 +49,9 @@ def filter_messages(message: Message, replies: Replies) -> None:
             return
 
         b = Board(game.board)
-        player = BLACK if game.black_player == message.get_sender_contact().addr else WHITE
+        player = (
+            BLACK if game.black_player == message.get_sender_contact().addr else WHITE
+        )
         if b.turn == player:
             if b.move(int(message.text)):
                 game.board = b.export()
