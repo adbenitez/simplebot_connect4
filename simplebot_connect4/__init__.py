@@ -39,7 +39,7 @@ def deltabot_member_removed(bot: DeltaBot, chat: Chat, contact: Contact) -> None
 
 
 @simplebot.filter(name=__name__)
-def filter_messages(message: Message, replies: Replies) -> None:
+def filter_messages(bot: DeltaBot, message: Message, replies: Replies) -> None:
     """Process move coordinates in Connect4 game groups"""
     if message.text not in "1234567":
         return
@@ -55,7 +55,7 @@ def filter_messages(message: Message, replies: Replies) -> None:
         if b.turn == player:
             if b.move(int(message.text)):
                 game.board = b.export()
-                replies.add(text=_run_turn(game))
+                replies.add(text=_run_turn(bot, game))
             else:
                 replies.add(text="❌ Invalid move!", quote=message)
 
@@ -86,14 +86,16 @@ def c4_play(bot: DeltaBot, payload: str, message: Message, replies: Replies) -> 
     with session_scope() as session:
         game = session.query(Game).filter_by(p1=p1, p2=p2).first()
         if game is None:  # first time playing with this contact
+            p1_name = bot.get_contact(sender).name
+            p2_name = bot.get_contact(payload).name
             chat = bot.create_group(f"4️⃣ {sender} 🆚 {payload}", [p1, p2])
             board = Board()
             game = Game(
                 p1=p1, p2=p2, chat_id=chat.id, board=board.export(), black_player=sender
             )
             session.add(game)
-            text = f"Hello {payload},\nYou have been invited by {sender} to play Connect4\n\n{board.get_disc(BLACK)}: {sender}\n{board.get_disc(WHITE)}: {payload}\n\n"
-            replies.add(text=text + _run_turn(game), chat=chat)
+            text = f"Hello {p2_name},\nYou have been invited by {p1_name} to play Connect4.\n\n{board.get_disc(BLACK)}: {p1_name}\n{board.get_disc(WHITE)}: {p2_name}\n\n"
+            replies.add(text=text + _run_turn(bot, game), chat=chat)
         else:
             text = f"❌ You already have a game group with {payload}"
             replies.add(text=text, chat=bot.get_chat(game.chat_id))
@@ -102,22 +104,22 @@ def c4_play(bot: DeltaBot, payload: str, message: Message, replies: Replies) -> 
 @simplebot.command
 def c4_surrender(message: Message, replies: Replies) -> None:
     """End the Connect4 game in the group it is sent."""
-    loser = message.get_sender_contact().addr
+    sender = message.get_sender_contact()
     with session_scope() as session:
         game = session.query(Game).filter_by(chat_id=message.chat.id).first()
-        if game is None or loser not in (game.p1, game.p2):
+        if game is None or sender.addr not in (game.p1, game.p2):
             replies.add(text="❌ This is not your game group", quote=message)
         elif game.board is None:
             replies.add(text="❌ There is no active game", quote=message)
         else:
             game.board = None
             replies.add(
-                text=f"🏳️ Game Over.\n{loser} surrenders.\n\n▶️ Play again? /c4_new"
+                text=f"🏳️ Game Over.\n{sender.name} surrenders.\n\n▶️ Play again? /c4_new"
             )
 
 
 @simplebot.command
-def c4_score(message: Message, replies: Replies) -> None:
+def c4_score(bot: DeltaBot, message: Message, replies: Replies) -> None:
     """Get players score in the Connect4 game group where it is sent."""
     with session_scope() as session:
         game = session.query(Game).filter_by(chat_id=message.chat.id).first()
@@ -125,32 +127,36 @@ def c4_score(message: Message, replies: Replies) -> None:
         if game is None:
             replies.add(text="❌ This is not a Connect4 game group", quote=message)
         else:
+            p1_name = bot.get_contact(game.p1).name
+            p2_name = bot.get_contact(game.p2).name
             replies.add(
-                text=f"📊 Score:\n{game.p1_wins} {game.p1}\n{game.p2_wins} {game.p2}"
+                text=f"📊 Score:\n{game.p1_wins} {p1_name}\n{game.p2_wins} {p2_name}"
             )
 
 
 @simplebot.command
-def c4_new(message: Message, replies: Replies) -> None:
+def c4_new(bot: DeltaBot, message: Message, replies: Replies) -> None:
     """Start a new Connect4 game in the current game group."""
-    sender = message.get_sender_contact().addr
+    sender = message.get_sender_contact()
     with session_scope() as session:
         game = session.query(Game).filter_by(chat_id=message.chat.id).first()
-        if game is None or sender not in (game.p1, game.p2):
+        if game is None or sender.addr not in (game.p1, game.p2):
             replies.add(text="❌ This is not your game group", quote=message)
         elif game.board is None:
             b = Board()
             game.board = b.export()
-            game.black_player = sender
-            p2 = game.p2 if sender == game.p1 else game.p1
-            text = f"Game started!\n{b.get_disc(BLACK)}: {sender}\n{b.get_disc(WHITE)}: {p2}\n\n"
-            replies.add(text=text + _run_turn(game))
+            game.black_player = sender.addr
+            p2_name = bot.get_contact(
+                game.p2 if sender.addr == game.p1 else game.p1
+            ).name
+            text = f"Game started!\n{b.get_disc(BLACK)}: {sender.name}\n{b.get_disc(WHITE)}: {p2_name}\n\n"
+            replies.add(text=text + _run_turn(bot, game))
         else:
             replies.add(text="❌ There is an active game already", quote=message)
 
 
 @simplebot.command
-def c4_repeat(message: Message, replies: Replies) -> None:
+def c4_repeat(bot: DeltaBot, message: Message, replies: Replies) -> None:
     """Send game board again."""
     with session_scope() as session:
         game = session.query(Game).filter_by(chat_id=message.chat.id).first()
@@ -159,11 +165,11 @@ def c4_repeat(message: Message, replies: Replies) -> None:
         elif not game.board:
             text = "❌ There is no active game"
         else:
-            text = _run_turn(game)
+            text = _run_turn(bot, game)
         replies.add(text=text)
 
 
-def _run_turn(game: Game) -> str:
+def _run_turn(bot: DeltaBot, game: Game) -> str:
     b = Board(game.board)
     result = b.result()
     if result is None:
@@ -178,19 +184,23 @@ def _run_turn(game: Game) -> str:
         if result == "-":
             text = "🤝 Game over.\nIt is a draw!"
         else:
+            p1_name = bot.get_contact(game.p1).name
+            p2_name = bot.get_contact(game.p2).name
             if result == BLACK:
                 if game.black_player == game.p1:
                     game.p1_wins += 1
+                    black_player = p1_name
                 else:
                     game.p2_wins += 1
-                winner = f"{b.get_disc(BLACK)} {game.black_player}"
+                    black_player = p2_name
+                winner = f"{b.get_disc(BLACK)} {black_player}"
             else:
                 if game.black_player != game.p1:
                     game.p1_wins += 1
-                    white_player = game.p1
+                    white_player = p1_name
                 else:
                     game.p2_wins += 1
-                    white_player = game.p2
+                    white_player = p2_name
                 winner = f"{b.get_disc(WHITE)} {white_player}"
-            text = f"🏆 Game over.\n{winner} wins!\n\n📊 Score:\n{game.p1_wins} {game.p1}\n{game.p2_wins} {game.p2}\n\n{b}\n\n▶️ Play again? /c4_new"
+            text = f"🏆 Game over.\n{winner} wins!\n\n📊 Score:\n{game.p1_wins} {p1_name}\n{game.p2_wins} {p2_name}\n\n{b}\n\n▶️ Play again? /c4_new"
     return text
