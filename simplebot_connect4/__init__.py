@@ -174,10 +174,10 @@ def _run_turn(bot: DeltaBot, game: Game) -> str:
     result = b.result()
     if result is None:
         if b.turn == BLACK:
-            turn = f"{b.get_disc(BLACK)} {game.black_player}"
+            turn = f"{b.get_disc(BLACK)} {bot.get_contact(game.black_player).name}"
         else:
             p2 = game.p2 if game.black_player == game.p1 else game.p1
-            turn = f"{b.get_disc(WHITE)} {p2}"
+            turn = f"{b.get_disc(WHITE)} {bot.get_contact(p2).name}"
         text = f"{turn} it's your turn...\n\n{b}"
     else:
         game.board = None
