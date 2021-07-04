@@ -113,6 +113,10 @@ def c4_surrender(message: Message, replies: Replies) -> None:
             replies.add(text="❌ There is no active game", quote=message)
         else:
             game.board = None
+            if sender.addr == game.p1:
+                game.p2_wins += 1
+            else:
+                game.p1_wins += 1
             replies.add(
                 text=f"🏳️ Game Over.\n{sender.name} surrenders.\n\n▶️ Play again? /c4_new"
             )
