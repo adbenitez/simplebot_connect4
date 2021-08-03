@@ -3,8 +3,7 @@ import os
 import simplebot
 from deltachat import Chat, Contact, Message
 from pkg_resources import DistributionNotFound, get_distribution
-from simplebot import DeltaBot
-from simplebot.bot import Replies
+from simplebot.bot import DeltaBot, Replies
 
 from .connect4 import BLACK, WHITE, Board
 from .orm import Game, init, session_scope
